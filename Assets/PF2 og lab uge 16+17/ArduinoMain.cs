@@ -6,6 +6,7 @@ using System.Threading;
 public class ArduinoMain : MonoBehaviour
 {
     public Breadboard breadboard;
+    public Servo servo;
     //On included/premade Arduino functions:
     //delay(timeInMilliseconds) : use "yield return delay(timeInMilliseconds)", to get similar functionality as delay() in arduino would give you.
 
@@ -19,8 +20,28 @@ public class ArduinoMain : MonoBehaviour
     //analogWrite() and analogRead() works as they do in arduino - remember to give them correct input-values.
     //digitalRead() and digitalWrite() writes and returns bools. (High = true). 
     //LineSensors have both write-functions implemented, motors/hbridge have both read-functions implemented.
-
     //The console will display a "NotImplementedException" if you attempt to write to sensors or read from motors. 
+
+
+    //Additions from 21-04-2020:
+
+    //Distance sensor:
+    //The Distance (ultrasonic) sensor is added, if you use "pulseIn()" on the pin it is assigned to, 
+    //it will return the time it took sound to travel double the distance to the point of impact in microseconds (type: ulong).
+    //This mimics roughly how the HC-SR04 sensor works. 
+    //There is no max-range of the distance-sensor. If it doesn't hit anything, it returns a 0.
+
+    //Servo:
+    //if you add the servo-prefab to the scene, ArduinoMain will automatically find the servo object, essentially handling "servo.attach()" automatically. 
+    //There can be only one servo controlled by this script.
+    //servo.write() and servo.read() implemented, they function similar to a servomotor. 
+    //The angles that servo.write() can handle are [0:179]. All inputs outside of this range, are clamped within the range.
+    //servo.read() will return the last angle written to the servo-arm. 
+    //In order to attach something to the servo, so that it rotates with the servo-arm, simply make the object you wish to rotate, a child of either: Servo-rotationCenter or Servo-arm. 
+    //Make sure to take into account the position of the object relative to Servo-rotationCenter. The rotated object will rotate positively around the Y-axis (up) of the Servo-rotationCenter gameobject.
+
+
+
 
     IEnumerator setup()
     {
@@ -29,8 +50,6 @@ public class ArduinoMain : MonoBehaviour
         //Example of delay:
         Debug.Log("pre-delay log");
         yield return delay(2000); //2 second delay
-        Debug.Log("After delay");
-
         //Your code ends here -----
 
         //following region ensures delay-functionality for setup() & loop(). Do not delete, must always be last thing in setup.
@@ -43,10 +62,6 @@ public class ArduinoMain : MonoBehaviour
     {
         //Your code goes here:
 
-        //Example analogRead:
-        int value = analogRead(5);
-        Debug.Log(value + " value at pin 5");
-        //Your code ends here -----
 
         //Following region is implemented as to allow "yield return delay()" to function the same way as one would expect it to on Arduino.
         //It should always be at the end of the loop()-function, and shouldn't be edited.
@@ -63,8 +78,14 @@ public class ArduinoMain : MonoBehaviour
     #region PremadeDefinitions
     void Start()
     {
+        servo = FindObjectOfType<Servo>();
+        if (servo == null)
+        {
+            Debug.Log("No servo found in the scene. Consider assigning it to 'ArduinoMain.cs' manually.");
+        }
         Time.fixedDeltaTime = 0.005f; //4x physics steps of what unity normally does - to improve sensor-performance.
         StartCoroutine(setup());
+
 
     }
 
@@ -84,6 +105,17 @@ public class ArduinoMain : MonoBehaviour
         return (ulong)(Time.timeSinceLevelLoad * 1000f);
     }
 
+    public ulong abs(long x)
+    {
+        return (ulong)Mathf.Abs(x);
+    }
+
+    public long constrain(long x, long a, long b)
+    {
+        return (x < a ? a : (x > b ? b : x));
+    }
+
+
     #endregion PremadeDefinitions
 
     #region InterfacingWithBreadboard
@@ -102,6 +134,11 @@ public class ArduinoMain : MonoBehaviour
     public void digitalWrite(int pin, bool isHigh)
     {
         breadboard.digitalWrite(pin, isHigh);
+    }
+
+    public ulong pulseIn(int pin)
+    {
+        return breadboard.pulseIn(pin);
     }
     #endregion InterfacingWithBreadboard
 }
